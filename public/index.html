@@ -63,7 +63,7 @@
             <button class="button button-primary" id="power-on" type="button"><span>启动实例</span><i>→</i></button>
             <button class="button button-quiet" id="power-off" type="button">关机</button>
           </div>
-          <label class="command-field"><span>开机命令（可选）</span><input id="start-command" value="sleep 1" maxlength="1000" /></label>
+          <label class="command-field"><span>开机命令（可选）</span><input id="start-command" value="bash /root/zealman-app/start-comfyui.sh &amp;&amp; bash /root/zealman-app/start-services.sh" maxlength="1000" /></label>
         </article>
 
         <article class="card quick-card">

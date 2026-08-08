@@ -170,7 +170,7 @@ app.post("/api/power-on", requireDashboardKey, requireAutoDLConfig, async (req, 
     const response = await autoDLRequest("POST", "/api/v1/dev/instance/pro/power_on", {
       instance_uuid: INSTANCE_UUID,
       payload: "gpu",
-      start_command: String(req.body?.start_command || "sleep 1").slice(0, 1000),
+      start_command: String(req.body?.start_command || "bash /root/zealman-app/start-comfyui.sh && bash /root/zealman-app/start-services.sh").slice(0, 1000),
     });
     sendAutoDLResponse(res, response);
   } catch (error) {
