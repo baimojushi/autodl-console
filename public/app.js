@@ -9,6 +9,8 @@ const state = {
 
 const COST_REFRESH_MS = 5 * 60 * 1000;
 const STARTED_AT_KEY = "autodl_started_at";
+const SESSION_COST_KEY = "autodl_session_cost";
+const TOTAL_COST_KEY = "autodl_total_cost";
 
 function getStartedAt() {
   return Number(localStorage.getItem(STARTED_AT_KEY) || 0);
@@ -17,6 +19,22 @@ function getStartedAt() {
 function setStartedAt(timestamp) {
   if (timestamp) localStorage.setItem(STARTED_AT_KEY, String(timestamp));
   else localStorage.removeItem(STARTED_AT_KEY);
+}
+
+function getSessionCost() {
+  return Number(localStorage.getItem(SESSION_COST_KEY) || 0);
+}
+
+function setSessionCost(value) {
+  localStorage.setItem(SESSION_COST_KEY, String(value));
+}
+
+function getTotalCost() {
+  return Number(localStorage.getItem(TOTAL_COST_KEY) || 0);
+}
+
+function setTotalCost(value) {
+  localStorage.setItem(TOTAL_COST_KEY, String(value));
 }
 
 const $ = (id) => document.getElementById(id);
@@ -110,7 +128,11 @@ function renderStatus(status) {
   $("power-on").disabled = ["running", "starting", "pending"].includes(status) || state.busy;
   $("power-off").disabled = ["stopped", "stopping", "released", "unknown"].includes(status) || state.busy;
   if (status === "running" && !getStartedAt()) setStartedAt(Date.now());
-  if (status !== "running" && getStartedAt()) setStartedAt(null);
+  if (status !== "running" && getStartedAt()) {
+    setTotalCost(getTotalCost() + getSessionCost());
+    setSessionCost(0);
+    setStartedAt(null);
+  }
   updateCostTimer();
 }
 
@@ -118,9 +140,11 @@ function updateCostTimer() {
   const startedAt = getStartedAt();
   const uptimeEl = $("uptime");
   const costEl = $("cost");
+  const totalEl = $("total-cost");
   if (!startedAt) {
     uptimeEl.textContent = "—";
     costEl.textContent = "—";
+    totalEl.textContent = getTotalCost() > 0 ? `¥${getTotalCost().toFixed(2)}` : "—";
     return;
   }
   const elapsedMs = Math.max(0, Date.now() - startedAt);
@@ -130,9 +154,15 @@ function updateCostTimer() {
   const s = Math.floor((elapsedMs % 60000) / 1000);
   uptimeEl.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   const price = Number(state.snapshot?.gpuPrice);
-  costEl.textContent = Number.isFinite(price) && price > 0
-    ? `¥${((price / 100) * hours).toFixed(2)}`
-    : "—";
+  if (Number.isFinite(price) && price > 0) {
+    const sessionCost = (price / 100) * hours;
+    setSessionCost(sessionCost);
+    costEl.textContent = `¥${sessionCost.toFixed(2)}`;
+    totalEl.textContent = `¥${(getTotalCost() + sessionCost).toFixed(2)}`;
+  } else {
+    costEl.textContent = "—";
+    totalEl.textContent = getTotalCost() > 0 ? `¥${getTotalCost().toFixed(2)}` : "—";
+  }
 }
 
 function renderSnapshot(data) {
