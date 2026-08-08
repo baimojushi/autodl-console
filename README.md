@@ -1,6 +1,6 @@
 # AutoDL Console
 
-当前版本：`2026-08-mobile-status-fix`
+当前版本：`2026-08-readiness-ui`
 
 一个适合部署到 Railway 的 AutoDL Pro 实例网页控制台。它把 AutoDL Token 保存在服务端，网页只负责查看状态、控制电源和打开实例服务入口。
 
@@ -9,6 +9,7 @@
 - 查询实例状态、GPU、区域、按量价格、CPU / 内存 / 系统盘使用率
 - 启动实例（可填写开机命令）和关机
 - 打开 JupyterLab、6006、6008 服务
+- 开机后分阶段等待实例、ComfyUI 和端口服务就绪，探活通过后才允许打开入口
 - 自动每 10 秒刷新
 - 可选的 `DASHBOARD_KEY` 访问保护
 - Railway 健康检查：`/health`
@@ -29,6 +30,14 @@
 如果使用 GitHub Actions，仓库自带的 `.github/workflows/ci.yml` 会在每次推送和 Pull Request 时检查依赖安装与 JavaScript 语法。
 
 `DASHBOARD_KEY` 为空时网页不要求登录；公开部署时强烈建议设置它。
+
+默认将 6008 作为 ComfyUI 就绪探测端口。如果你的 ComfyUI 实际运行在 6006，在 Railway Variables 中设置：
+
+```text
+COMFYUI_SERVICE_PORT=6006
+```
+
+控制台会从 Railway 服务端探测 AutoDL 映射域名；服务返回 404、5xx 或连接超时都会继续显示“启动中”，不会提前打开页面。
 
 ## 本地运行
 

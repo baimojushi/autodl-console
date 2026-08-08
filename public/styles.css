@@ -39,3 +39,34 @@ button { border: 0; color: inherit; }
 .key-dialog { width: min(410px, calc(100% - 32px)); padding: 29px; border: 1px solid var(--line); border-radius: 18px; background: #101d32; color: var(--text); box-shadow: 0 30px 100px rgba(0,0,0,.5); }.key-dialog::backdrop { background: rgba(0,0,0,.65); backdrop-filter: blur(5px); }.key-dialog h2 { margin: 10px 0; font-size: 24px; letter-spacing: -.05em; }.key-dialog p:not(.eyebrow) { color: var(--muted); font-size: 12px; line-height: 1.6; }.key-dialog input { display: block; width: 100%; margin: 21px 0 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(0,0,0,.17); color: var(--text); padding: 11px; outline: 0; }.key-dialog input:focus { border-color: var(--cyan); }.key-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 13px; border-radius: 9px; background: rgba(0,0,0,.22); color: var(--cyan); font: 12px "DM Mono", monospace; line-height: 1.6; }
 @media (max-width: 760px) { .shell { width: min(100% - 24px, 600px); padding-top: 14px; padding-bottom: 32px; }.brand { font-size: 12px; }.brand em { display: none; }.last-sync { display: none; }.hero { min-height: 0; padding: 46px 2px 30px; }.hero h1 { font-size: clamp(39px, 13vw, 58px); margin-top: 12px; }.hero-copy { margin-bottom: 0; font-size: 13px; line-height: 1.65; }.hero-orbit { display: none; }.status-card { display: grid; gap: 19px; padding: 18px; border-radius: 15px; }.status-main { gap: 12px; }.status-indicator { width: 42px; height: 42px; border-radius: 12px; }.status-card h2 { font-size: 22px; }.status-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding-top: 3px; }.status-meta strong { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.status-meta span { font-size: 9px; }.action-grid, .metrics-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }.action-card, .quick-card { min-height: 0; padding: 18px; border-radius: 15px; }.card-copy { margin: 16px 0; font-size: 12px; }.power-actions { display: grid; grid-template-columns: 1fr 88px; gap: 8px; }.button { min-height: 48px; padding: 0 14px; }.button i { margin-left: 12px; }.command-field { max-width: none; margin-top: 15px; }.command-field input { min-height: 43px; }.service-list { margin-top: 13px; gap: 2px; }.service-row { min-height: 56px; padding: 10px 5px; }.service-badge { width: 34px; height: 34px; }.service-name strong { font-size: 13px; }.service-name small { font-size: 10px; }.metric-card { padding: 16px 18px; border-radius: 14px; }.footer-panel { align-items: flex-start; gap: 13px; flex-direction: column; padding-top: 19px; line-height: 1.6; }.text-button { min-height: 38px; } }
 @media (max-width: 360px) { .shell { width: calc(100% - 18px); }.hero h1 { font-size: 38px; }.status-meta strong { font-size: 10px; }.power-actions { grid-template-columns: 1fr 76px; } }
+
+/* Startup readiness + lively visual layer */
+:root { --lime: #d8ff62; --pink: #ff68c8; --blue: #6f8cff; }
+body { background: radial-gradient(circle at 82% -8%, rgba(255,104,200,.16), transparent 30rem), radial-gradient(circle at -5% 70%, rgba(111,140,255,.14), transparent 28rem), var(--bg); }
+.hero h1 span { background: linear-gradient(100deg, var(--cyan), var(--lime) 48%, var(--pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.card { border-color: rgba(216,255,98,.16); box-shadow: 0 22px 70px rgba(0,0,0,.18), inset 0 1px rgba(255,255,255,.04); }
+.button-primary { background: linear-gradient(135deg, var(--lime), var(--cyan)); box-shadow: 0 10px 28px rgba(88,225,203,.2); }
+.boot-card { margin-top: 16px; padding: 23px 28px 20px; border-color: rgba(216,255,98,.2); background: linear-gradient(135deg, rgba(35,52,60,.92), rgba(18,28,52,.92)); }
+.boot-card.ready { border-color: rgba(216,255,98,.45); background: linear-gradient(135deg, rgba(40,59,54,.94), rgba(18,34,49,.94)); }
+.boot-card-header { display: flex; align-items: center; justify-content: space-between; }
+.boot-icon { color: var(--lime); background: rgba(216,255,98,.12); }
+.boot-percent { color: var(--lime); font: 600 14px "DM Mono", monospace; }
+.boot-progress { height: 7px; margin: 18px 0 20px; overflow: hidden; border-radius: 10px; background: rgba(255,255,255,.08); }
+.boot-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--cyan), var(--lime)); transition: width .45s ease; }
+.boot-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.boot-step { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--muted); }
+.boot-step > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.boot-step strong { color: var(--text); font-size: 11px; }
+.boot-step small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px "DM Mono", monospace; }
+.step-dot { display: grid; flex: 0 0 28px; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 50%; color: var(--muted); font: 11px "DM Mono", monospace; }
+.boot-step.active .step-dot { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 0 5px rgba(88,225,203,.08); animation: pulse-dot 1.5s ease-in-out infinite; }
+.boot-step.done .step-dot { border-color: var(--lime); background: var(--lime); color: #132018; }
+.boot-step.done strong { color: var(--lime); }
+.boot-detail { margin: 18px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+@keyframes pulse-dot { 50% { transform: scale(1.08); opacity: .72; } }
+.status-indicator.loading span { animation: pulse-dot 1.2s ease-in-out infinite; background: var(--orange); box-shadow: 0 0 16px rgba(255,180,107,.65); }
+.service-state { flex: 0 0 auto; color: var(--muted); font: 10px "DM Mono", monospace; }
+.service-state.ready { color: var(--lime); }
+.service-row:not(:disabled) { border: 1px solid rgba(216,255,98,.14); background: rgba(216,255,98,.035); }
+.service-row:not(:disabled):hover { border-color: rgba(216,255,98,.4); background: rgba(216,255,98,.08); }
+@media (max-width: 760px) { .boot-card { margin-top: 12px; padding: 18px; border-radius: 15px; }.boot-steps { grid-template-columns: 1fr; gap: 9px; }.boot-step { min-height: 34px; }.boot-detail { margin-top: 14px; }.service-state { font-size: 9px; } }

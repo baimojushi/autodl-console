@@ -6,10 +6,12 @@ const axios = require("axios");
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const AUTODL_HOST = "https://api.autodl.com";
-const APP_VERSION = "2026-08-mobile-status-fix";
+const APP_VERSION = "2026-08-readiness-ui";
 const AUTODL_TOKEN = process.env.AUTODL_TOKEN;
 const INSTANCE_UUID = process.env.AUTODL_INSTANCE_UUID;
 const DASHBOARD_KEY = process.env.DASHBOARD_KEY || "";
+const COMFYUI_SERVICE_PORT = String(process.env.COMFYUI_SERVICE_PORT || "6008");
+const PROBE_TIMEOUT_MS = Number(process.env.PROBE_TIMEOUT_MS || 5000);
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "32kb" }));
@@ -130,6 +132,65 @@ function sanitizeSnapshot(payload) {
   };
 }
 
+async function fetchSnapshot() {
+  const response = await autoDLRead("/api/v1/dev/instance/pro/snapshot", {
+    instance_uuid: INSTANCE_UUID,
+  });
+  if (response.status < 200 || response.status >= 300 || response.data?.code !== "Success") {
+    const error = new Error(response.data?.msg || response.data?.message || "无法获取实例详情");
+    error.status = response.status;
+    throw error;
+  }
+  return sanitizeSnapshot(response.data);
+}
+
+async function probeService(url) {
+  if (!url) return { ready: false, phase: "waiting", httpStatus: null };
+  try {
+    const response = await axios.get(url, {
+      timeout: PROBE_TIMEOUT_MS,
+      maxRedirects: 3,
+      validateStatus: () => true,
+      headers: { "User-Agent": "autodl-console-readiness/1.0" },
+    });
+    const ready = (response.status >= 200 && response.status < 400) || response.status === 401 || response.status === 403;
+    return { ready, phase: ready ? "ready" : "starting", httpStatus: response.status };
+  } catch (error) {
+    return { ready: false, phase: "starting", httpStatus: error.response?.status || null };
+  }
+}
+
+async function buildReadiness(status) {
+  if (status !== "running") {
+    return {
+      instanceStatus: status,
+      ready: false,
+      comfyuiPort: COMFYUI_SERVICE_PORT,
+      services: {
+        jupyter: { ready: false, phase: "waiting", httpStatus: null },
+        service6006: { ready: false, phase: "waiting", httpStatus: null },
+        service6008: { ready: false, phase: "waiting", httpStatus: null },
+      },
+    };
+  }
+
+  const snapshot = await fetchSnapshot();
+  const [jupyter, service6006, service6008] = await Promise.all([
+    probeService(snapshot.links.jupyter),
+    probeService(snapshot.links.service6006),
+    probeService(snapshot.links.service6008),
+  ]);
+  const comfyuiKey = COMFYUI_SERVICE_PORT === "6006" ? "service6006" : "service6008";
+  const services = { jupyter, service6006, service6008 };
+  return {
+    instanceStatus: status,
+    ready: services[comfyuiKey].ready,
+    comfyuiPort: COMFYUI_SERVICE_PORT,
+    services,
+    snapshot,
+  };
+}
+
 app.get("/health", (req, res) => {
   res.json({ ok: true, version: APP_VERSION, configured: Boolean(AUTODL_TOKEN && INSTANCE_UUID) });
 });
@@ -155,13 +216,24 @@ app.get("/api/status", requireDashboardKey, requireAutoDLConfig, async (req, res
 
 app.get("/api/snapshot", requireDashboardKey, requireAutoDLConfig, async (req, res) => {
   try {
-    const response = await autoDLRead("/api/v1/dev/instance/pro/snapshot", {
+    res.json({ code: "Success", data: await fetchSnapshot() });
+  } catch (error) {
+    res.status(error.status && error.status >= 400 ? error.status : 502).json({ code: "AutoDLUnavailable", message: error.message });
+  }
+});
+
+app.get("/api/readiness", requireDashboardKey, requireAutoDLConfig, async (req, res) => {
+  try {
+    const statusResponse = await autoDLRead("/api/v1/dev/instance/pro/status", {
       instance_uuid: INSTANCE_UUID,
     });
-    if (response.status < 200 || response.status >= 300) return sendAutoDLResponse(res, response);
-    res.json({ code: response.data?.code || "Success", data: sanitizeSnapshot(response.data) });
+    if (statusResponse.status < 200 || statusResponse.status >= 300 || statusResponse.data?.code !== "Success") {
+      return sendAutoDLResponse(res, statusResponse);
+    }
+    const status = typeof statusResponse.data.data === "string" ? statusResponse.data.data.toLowerCase() : "unknown";
+    res.json({ code: "Success", data: await buildReadiness(status) });
   } catch (error) {
-    res.status(502).json({ code: "AutoDLUnavailable", message: error.message });
+    res.status(error.status && error.status >= 400 ? error.status : 502).json({ code: "ReadinessUnavailable", message: error.message });
   }
 });
 

@@ -29,7 +29,7 @@
         <div>
           <p class="eyebrow">PRO INSTANCE / LIVE CONTROL</p>
           <h1>你的算力，<br /><span>随时在线。</span></h1>
-          <p class="hero-copy">从一个轻量控制台启动 GPU 实例，直接进入 JupyterLab 或你的 Web 服务。</p>
+          <p class="hero-copy">从一个轻量控制台启动 GPU 实例，等 ComfyUI 和端口服务真正就绪后再进入工作台。</p>
         </div>
         <div class="hero-orbit" aria-hidden="true">
           <div class="orbit-ring ring-one"></div>
@@ -55,6 +55,20 @@
         </div>
       </section>
 
+      <section class="boot-card card" id="boot-card">
+        <div class="boot-card-header">
+          <div class="card-heading"><span class="section-icon boot-icon">✦</span><div><p class="label">STARTUP MONITOR</p><h3 id="boot-title">启动准备</h3></div></div>
+          <span class="boot-percent" id="boot-percent">0%</span>
+        </div>
+        <div class="boot-progress"><span id="boot-progress-bar"></span></div>
+        <div class="boot-steps">
+          <div class="boot-step" id="step-instance"><span class="step-dot">1</span><span><strong>实例开机</strong><small>等待 GPU 调度</small></span></div>
+          <div class="boot-step" id="step-comfyui"><span class="step-dot">2</span><span><strong>ComfyUI</strong><small>等待服务监听</small></span></div>
+          <div class="boot-step" id="step-services"><span class="step-dot">3</span><span><strong>端口服务</strong><small>探活通过后开放</small></span></div>
+        </div>
+        <p class="boot-detail" id="boot-detail">启动实例后，这里会显示实时准备进度。</p>
+      </section>
+
       <section class="action-grid">
         <article class="card action-card primary-action">
           <div class="card-heading"><span class="section-icon bolt">↯</span><div><p class="label">POWER CONTROL</p><h3>实例电源</h3></div></div>
@@ -69,9 +83,9 @@
         <article class="card quick-card">
           <div class="card-heading"><span class="section-icon purple">⌘</span><div><p class="label">QUICK ACCESS</p><h3>服务入口</h3></div></div>
           <div class="service-list">
-            <button class="service-row" id="open-jupyter" type="button"><span class="service-badge jupyter">J</span><span class="service-name"><strong>JupyterLab</strong><small>开发环境 · 8443</small></span><span class="service-arrow">↗</span></button>
-            <button class="service-row" id="open-6006" type="button"><span class="service-badge chart">◒</span><span class="service-name"><strong>6006 服务</strong><small>主 Web 服务</small></span><span class="service-arrow">↗</span></button>
-            <button class="service-row" id="open-6008" type="button"><span class="service-badge monitor">◌</span><span class="service-name"><strong>6008 服务</strong><small>备用 Web 服务</small></span><span class="service-arrow">↗</span></button>
+            <button class="service-row" id="open-jupyter" type="button" disabled><span class="service-badge jupyter">J</span><span class="service-name"><strong>JupyterLab</strong><small>开发环境 · 8443</small></span><span class="service-state" id="service-state-jupyter">等待</span><span class="service-arrow">↗</span></button>
+            <button class="service-row" id="open-6006" type="button" disabled><span class="service-badge chart">◒</span><span class="service-name"><strong>6006 服务</strong><small>主 Web 服务</small></span><span class="service-state" id="service-state-6006">等待</span><span class="service-arrow">↗</span></button>
+            <button class="service-row" id="open-6008" type="button" disabled><span class="service-badge monitor">◌</span><span class="service-name"><strong>6008 服务</strong><small>ComfyUI / 备用 Web 服务</small></span><span class="service-state" id="service-state-6008">等待</span><span class="service-arrow">↗</span></button>
           </div>
         </article>
       </section>
