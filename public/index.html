@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#07101f" />
-    <title>AutoDL 实例控制台</title>
+    <title>你的视频算力，随时在线</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -28,8 +28,8 @@
       <section class="hero">
         <div>
           <p class="eyebrow">PRO INSTANCE / LIVE CONTROL</p>
-          <h1>你的算力，<br /><span>随时在线。</span></h1>
-          <p class="hero-copy">从一个轻量控制台启动 GPU 实例，等 ComfyUI 和端口服务真正就绪后再进入工作台。</p>
+          <h1>你的视频算力，<br /><span>随时在线</span></h1>
+          <p class="hero-copy">从本页启动 GPU 服务器，等 ComfyUI 和端口服务就绪后点击服务入口进入工作台。</p>
         </div>
         <div class="hero-orbit" aria-hidden="true">
           <div class="orbit-ring ring-one"></div>
@@ -52,6 +52,8 @@
           <div><span>GPU</span><strong id="gpu-name">—</strong></div>
           <div><span>区域</span><strong id="region">—</strong></div>
           <div><span>按量价格</span><strong id="price">—</strong></div>
+          <div><span>运行时长</span><strong id="uptime">—</strong></div>
+          <div><span>已花费</span><strong id="cost">—</strong></div>
         </div>
       </section>
 
@@ -84,8 +86,8 @@
           <div class="card-heading"><span class="section-icon purple">⌘</span><div><p class="label">QUICK ACCESS</p><h3>服务入口</h3></div></div>
           <div class="service-list">
             <button class="service-row" id="open-jupyter" type="button" disabled><span class="service-badge jupyter">J</span><span class="service-name"><strong>JupyterLab</strong><small>开发环境 · 8443</small></span><span class="service-state" id="service-state-jupyter">等待</span><span class="service-arrow">↗</span></button>
-            <button class="service-row" id="open-6006" type="button" disabled><span class="service-badge chart">◒</span><span class="service-name"><strong>6006 服务</strong><small>主 Web 服务</small></span><span class="service-state" id="service-state-6006">等待</span><span class="service-arrow">↗</span></button>
-            <button class="service-row" id="open-6008" type="button" disabled><span class="service-badge monitor">◌</span><span class="service-name"><strong>6008 服务</strong><small>ComfyUI / 备用 Web 服务</small></span><span class="service-state" id="service-state-6008">等待</span><span class="service-arrow">↗</span></button>
+            <button class="service-row" id="open-6006" type="button" disabled><span class="service-badge chart">◒</span><span class="service-name"><strong>精细化控制台</strong><small>主 Web 服务</small></span><span class="service-state" id="service-state-6006">等待</span><span class="service-arrow">↗</span></button>
+            <button class="service-row" id="open-6008" type="button" disabled><span class="service-badge monitor">◌</span><span class="service-name"><strong>快速开始</strong><small>ComfyUI / 备用 Web 服务</small></span><span class="service-state" id="service-state-6008">等待</span><span class="service-arrow">↗</span></button>
           </div>
         </article>
       </section>

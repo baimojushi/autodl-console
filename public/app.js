@@ -7,6 +7,18 @@ const state = {
   refreshing: false,
 };
 
+const COST_REFRESH_MS = 5 * 60 * 1000;
+const STARTED_AT_KEY = "autodl_started_at";
+
+function getStartedAt() {
+  return Number(localStorage.getItem(STARTED_AT_KEY) || 0);
+}
+
+function setStartedAt(timestamp) {
+  if (timestamp) localStorage.setItem(STARTED_AT_KEY, String(timestamp));
+  else localStorage.removeItem(STARTED_AT_KEY);
+}
+
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -97,6 +109,30 @@ function renderStatus(status) {
   $("hero-status").textContent = status === "running" ? "ONLINE" : statusText(status).toUpperCase();
   $("power-on").disabled = ["running", "starting", "pending"].includes(status) || state.busy;
   $("power-off").disabled = ["stopped", "stopping", "released", "unknown"].includes(status) || state.busy;
+  if (status === "running" && !getStartedAt()) setStartedAt(Date.now());
+  if (status !== "running" && getStartedAt()) setStartedAt(null);
+  updateCostTimer();
+}
+
+function updateCostTimer() {
+  const startedAt = getStartedAt();
+  const uptimeEl = $("uptime");
+  const costEl = $("cost");
+  if (!startedAt) {
+    uptimeEl.textContent = "—";
+    costEl.textContent = "—";
+    return;
+  }
+  const elapsedMs = Math.max(0, Date.now() - startedAt);
+  const hours = elapsedMs / 3600000;
+  const h = Math.floor(hours);
+  const m = Math.floor((elapsedMs % 3600000) / 60000);
+  const s = Math.floor((elapsedMs % 60000) / 1000);
+  uptimeEl.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  const price = Number(state.snapshot?.gpuPrice);
+  costEl.textContent = Number.isFinite(price) && price > 0
+    ? `¥${((price / 100) * hours).toFixed(2)}`
+    : "—";
 }
 
 function renderSnapshot(data) {
@@ -104,7 +140,7 @@ function renderSnapshot(data) {
   state.snapshot = data;
   $("gpu-name").textContent = data.gpuName || "—";
   $("region").textContent = data.regionSign || "自动调度";
-  $("price").textContent = data.gpuPrice == null ? "—" : `${data.gpuPrice} / 小时`;
+  $("price").textContent = data.gpuPrice == null ? "—" : `${(Number(data.gpuPrice) / 100).toFixed(2)} 元 / 小时`;
   setProgress(data.usage?.cpuPercent, "cpu-value", "cpu-bar");
   setProgress(data.usage?.memoryPercent, "memory-value", "memory-bar");
   setProgress(data.usage?.rootTotal ? (data.usage.rootUsed / data.usage.rootTotal) * 100 : null, "disk-value", "disk-bar");
@@ -279,3 +315,8 @@ $("show-ssh").addEventListener("click", () => $("ssh-dialog").showModal());
 
 refresh();
 setInterval(refresh, 5000);
+setInterval(updateCostTimer, 1000);
+setInterval(() => {
+  refresh();
+  updateCostTimer();
+}, COST_REFRESH_MS);
