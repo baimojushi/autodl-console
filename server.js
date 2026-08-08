@@ -90,10 +90,10 @@ function sendAutoDLResponse(res, response) {
   return res.status(200).json(response.data);
 }
 
-function domainUrl(domain, protocol = "https") {
+function domainUrl(domain) {
   if (!domain) return null;
-  const value = String(domain).trim();
-  return /^https?:\/\//i.test(value) ? value : `${protocol}://${value}`;
+  const value = String(domain).trim().replace(/^http:\/\//i, "https://");
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 }
 
 function sanitizeSnapshot(payload) {
@@ -119,8 +119,8 @@ function sanitizeSnapshot(payload) {
     links: {
       jupyter: domainUrl(data.jupyter_domain),
       jupyterToken: data.jupyter_token || null,
-      service6006: domainUrl(data.service_6006_domain, data.service_6006_port_protocol || "https"),
-      service6008: domainUrl(data.service_6008_domain, data.service_6008_port_protocol || "https"),
+      service6006: domainUrl(data.service_6006_domain),
+      service6008: domainUrl(data.service_6008_domain),
     },
     raw: {
       jupyterDomain: data.jupyter_domain || null,
