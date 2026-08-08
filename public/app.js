@@ -107,6 +107,12 @@ function formatBytes(bytes) {
   return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
 }
 
+function formatPrice(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "—";
+  return (numeric / 1000).toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+}
+
 function setProgress(value, valueId, barId) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -155,7 +161,7 @@ function updateCostTimer() {
   uptimeEl.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   const price = Number(state.snapshot?.gpuPrice);
   if (Number.isFinite(price) && price > 0) {
-    const sessionCost = (price / 100) * hours;
+    const sessionCost = (price / 1000) * hours;
     setSessionCost(sessionCost);
     costEl.textContent = `¥${sessionCost.toFixed(2)}`;
     totalEl.textContent = `¥${(getTotalCost() + sessionCost).toFixed(2)}`;
@@ -170,7 +176,7 @@ function renderSnapshot(data) {
   state.snapshot = data;
   $("gpu-name").textContent = data.gpuName || "—";
   $("region").textContent = data.regionSign || "自动调度";
-  $("price").textContent = data.gpuPrice == null ? "—" : `${(Number(data.gpuPrice) / 100).toFixed(2)} 元 / 小时`;
+  $("price").textContent = data.gpuPrice == null ? "—" : `${formatPrice(data.gpuPrice)} 元 / 小时`;
   setProgress(data.usage?.cpuPercent, "cpu-value", "cpu-bar");
   setProgress(data.usage?.memoryPercent, "memory-value", "memory-bar");
   setProgress(data.usage?.rootTotal ? (data.usage.rootUsed / data.usage.rootTotal) * 100 : null, "disk-value", "disk-bar");
