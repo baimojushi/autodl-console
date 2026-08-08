@@ -6,6 +6,7 @@ const axios = require("axios");
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const AUTODL_HOST = "https://api.autodl.com";
+const APP_VERSION = "2026-08-mobile-status-fix";
 const AUTODL_TOKEN = process.env.AUTODL_TOKEN;
 const INSTANCE_UUID = process.env.AUTODL_INSTANCE_UUID;
 const DASHBOARD_KEY = process.env.DASHBOARD_KEY || "";
@@ -45,6 +46,9 @@ function autoDLRequest(method, endpoint, data) {
     baseURL: AUTODL_HOST,
     url: endpoint,
     data,
+    // AutoDL 文档示例使用 GET + JSON body，但部分网关会忽略 GET body。
+    // 同时发送 query 参数，兼容两种实现。
+    params: method.toUpperCase() === "GET" ? data : undefined,
     headers: {
       Authorization: AUTODL_TOKEN,
       "Content-Type": "application/json",
@@ -52,6 +56,27 @@ function autoDLRequest(method, endpoint, data) {
     timeout: 20000,
     validateStatus: () => true,
   });
+}
+
+async function autoDLRead(endpoint, body) {
+  let response = await autoDLRequest("GET", endpoint, body);
+  const code = response.data?.code;
+  // 某些部署只接受 POST 读取接口；仅在接口返回失败时尝试兼容路径。
+  if (response.status === 405 || response.status === 415 || (response.status === 200 && code && code !== "Success")) {
+    const fallback = await autoDLRequest("POST", endpoint, body);
+    if (fallback.status >= 200 && fallback.status < 300 && fallback.data?.code === "Success") {
+      response = fallback;
+    }
+  }
+  if (response.status < 200 || response.status >= 300 || response.data?.code !== "Success") {
+    console.warn("AutoDL read failed", {
+      endpoint,
+      httpStatus: response.status,
+      code: response.data?.code,
+      message: response.data?.msg || response.data?.message,
+    });
+  }
+  return response;
 }
 
 function sendAutoDLResponse(res, response) {
@@ -106,7 +131,7 @@ function sanitizeSnapshot(payload) {
 }
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, configured: Boolean(AUTODL_TOKEN && INSTANCE_UUID) });
+  res.json({ ok: true, version: APP_VERSION, configured: Boolean(AUTODL_TOKEN && INSTANCE_UUID) });
 });
 
 app.get("/api/config", requireDashboardKey, (req, res) => {
@@ -119,7 +144,7 @@ app.get("/api/config", requireDashboardKey, (req, res) => {
 
 app.get("/api/status", requireDashboardKey, requireAutoDLConfig, async (req, res) => {
   try {
-    const response = await autoDLRequest("GET", "/api/v1/dev/instance/pro/status", {
+    const response = await autoDLRead("/api/v1/dev/instance/pro/status", {
       instance_uuid: INSTANCE_UUID,
     });
     sendAutoDLResponse(res, response);
@@ -130,7 +155,7 @@ app.get("/api/status", requireDashboardKey, requireAutoDLConfig, async (req, res
 
 app.get("/api/snapshot", requireDashboardKey, requireAutoDLConfig, async (req, res) => {
   try {
-    const response = await autoDLRequest("GET", "/api/v1/dev/instance/pro/snapshot", {
+    const response = await autoDLRead("/api/v1/dev/instance/pro/snapshot", {
       instance_uuid: INSTANCE_UUID,
     });
     if (response.status < 200 || response.status >= 300) return sendAutoDLResponse(res, response);

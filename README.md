@@ -1,5 +1,7 @@
 # AutoDL Console
 
+当前版本：`2026-08-mobile-status-fix`
+
 一个适合部署到 Railway 的 AutoDL Pro 实例网页控制台。它把 AutoDL Token 保存在服务端，网页只负责查看状态、控制电源和打开实例服务入口。
 
 ## 功能

@@ -13,8 +13,17 @@ async function api(path, options = {}) {
     sessionStorage.removeItem("autodl_dashboard_key");
     openKeyDialog();
   }
-  if (!response.ok) throw new Error(data.message || data.msg || data.error || `请求失败（${response.status}）`);
+  if (!response.ok || (data.code && data.code !== "Success" && data.code !== "Unauthorized")) {
+    const detail = data.detail?.msg || data.detail?.message;
+    throw new Error(data.message || data.msg || detail || data.error || `请求失败（${response.status}）`);
+  }
   return data;
+}
+
+function normalizeStatus(value) {
+  if (typeof value === "string") return value.toLowerCase();
+  if (value && typeof value === "object") return String(value.status || value.state || "unknown").toLowerCase();
+  return "unknown";
 }
 
 function openKeyDialog() {
@@ -85,8 +94,9 @@ async function refresh() {
     window.__instanceUuid = config.instanceUuid;
     if (!config.configured) throw new Error("Railway 尚未配置 AutoDL 环境变量");
     const statusResponse = await api("/api/status");
-    renderStatus(statusResponse.data);
-    if (statusResponse.data === "running") {
+    const currentStatus = normalizeStatus(statusResponse.data);
+    renderStatus(currentStatus);
+    if (currentStatus === "running") {
       const snapshotResponse = await api("/api/snapshot");
       renderSnapshot(snapshotResponse.data);
     }
