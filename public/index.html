@@ -24,7 +24,6 @@
           <button class="icon-button" id="refresh-button" type="button" title="刷新状态" aria-label="刷新状态">↻</button>
         </div>
       </header>
-
       <section class="hero">
         <div>
           <p class="eyebrow">PRO INSTANCE / LIVE CONTROL</p>
@@ -38,7 +37,6 @@
           <span class="orbit-dot dot-one"></span><span class="orbit-dot dot-two"></span><span class="orbit-dot dot-three"></span>
         </div>
       </section>
-
       <section class="status-card card">
         <div class="status-main">
           <div class="status-indicator" id="status-indicator"><span></span></div>
@@ -57,7 +55,6 @@
           <div><span>累计花费</span><strong id="total-cost">—</strong></div>
         </div>
       </section>
-
       <section class="boot-card card" id="boot-card">
         <div class="boot-card-header">
           <div class="card-heading"><span class="section-icon boot-icon">✦</span><div><p class="label">STARTUP MONITOR</p><h3 id="boot-title">启动准备</h3></div></div>
@@ -71,7 +68,6 @@
         </div>
         <p class="boot-detail" id="boot-detail">启动实例后，这里会显示实时准备进度。</p>
       </section>
-
       <section class="action-grid">
         <article class="card action-card primary-action">
           <div class="card-heading"><span class="section-icon bolt">↯</span><div><p class="label">POWER CONTROL</p><h3>实例电源</h3></div></div>
@@ -80,9 +76,8 @@
             <button class="button button-primary" id="power-on" type="button"><span>启动实例</span><i>→</i></button>
             <button class="button button-quiet" id="power-off" type="button">关机</button>
           </div>
-          <label class="command-field"><span>开机命令（可选）</span><input id="start-command" value="bash /root/zealman-app/start-comfyui.sh &amp;&amp; bash /root/zealman-app/start-services.sh" maxlength="1000" /></label>
+          <label class="command-field"><span>开机命令</span><input id="start-command" value="由 Railway 的 AUTODL_START_COMMAND 管理" disabled /></label>
         </article>
-
         <article class="card quick-card">
           <div class="card-heading"><span class="section-icon purple">⌘</span><div><p class="label">QUICK ACCESS</p><h3>服务入口</h3></div></div>
           <div class="service-list">
@@ -92,13 +87,11 @@
           </div>
         </article>
       </section>
-
       <section class="metrics-grid">
         <article class="card metric-card"><div class="metric-title"><span>CPU 使用率</span><strong id="cpu-value">—</strong></div><div class="progress"><span id="cpu-bar"></span></div><p class="metric-foot">实时采样</p></article>
         <article class="card metric-card"><div class="metric-title"><span>内存使用率</span><strong id="memory-value">—</strong></div><div class="progress purple-progress"><span id="memory-bar"></span></div><p class="metric-foot" id="memory-foot">等待实例数据</p></article>
         <article class="card metric-card"><div class="metric-title"><span>系统盘</span><strong id="disk-value">—</strong></div><div class="progress orange-progress"><span id="disk-bar"></span></div><p class="metric-foot">容器根文件系统</p></article>
       </section>
-
       <section class="footer-panel">
         <div><span class="live-dot"></span><span>自动刷新 <strong id="refresh-state">开启</strong></span><span class="separator">·</span><span>每 10 秒同步一次</span></div>
         <button id="show-ssh" class="text-button" type="button">查看 SSH 命令 <span>→</span></button>
@@ -106,7 +99,6 @@
 
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
     </main>
-
     <dialog id="key-dialog" class="key-dialog">
       <form method="dialog" id="key-form">
         <p class="eyebrow">PRIVATE CONSOLE</p>
@@ -116,7 +108,6 @@
         <button class="button button-primary" value="submit" type="submit">进入控制台 <i>→</i></button>
       </form>
     </dialog>
-
     <dialog id="ssh-dialog" class="key-dialog">
       <form method="dialog"><p class="eyebrow">REMOTE ACCESS</p><h2>SSH 连接命令</h2><pre id="ssh-command">暂未获取到实例信息</pre><button class="button button-quiet" value="close">关闭</button></form>
     </dialog>
