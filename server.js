@@ -16,7 +16,7 @@ const AUTODL_START_COMMAND =
   process.env.AUTODL_START_COMMAND ||
   "bash /root/zealman-app/start-comfyui.sh && bash /root/zealman-app/start-services.sh";
 
-const COMFYUI_SERVICE_PORT = String(process.env.COMFYUI_SERVICE_PORT || "6008");
+const COMFYUI_SERVICE_PORT = String(process.env.COMFYUI_SERVICE_PORT || "6006");
 const PROBE_TIMEOUT_MS = Number(process.env.PROBE_TIMEOUT_MS || 5000);
 const AUTODL_SERVICE_HOST_SUFFIX = String(
   process.env.AUTODL_SERVICE_HOST_SUFFIX || ".autodl.com"
@@ -60,6 +60,12 @@ const BOOT_GUARD_AUTH_WINDOW_MS = envNumber(
   60000,
   60 * 60 * 1000
 );
+const BOOT_GUARD_PENDING_TTL_MS = envNumber(
+  "BOOT_GUARD_PENDING_TTL_MS",
+  5 * 60 * 1000,
+  60000,
+  15 * 60 * 1000
+);
 
 if (Buffer.byteLength(DASHBOARD_KEY, "utf8") < 24) {
   throw new Error("DASHBOARD_KEY must be configured and at least 24 bytes long");
@@ -93,6 +99,9 @@ const guardState = {
   nonce: null,
   connectedAtMs: null,
   lastSeenAtMs: null,
+  localServices: null,
+  pendingNonce: null,
+  pendingIssuedAtMs: null,
 };
 let guardPollInFlight = false;
 let guardPowerOffInFlight = false;
@@ -261,10 +270,12 @@ async function autoDLRead(endpoint, body) {
 }
 
 function sendAutoDLResponse(res, response) {
-  if (response.status < 200 || response.status >= 300) {
-    return res.status(response.status).json({
-      code: "AutoDLHttpError",
-      message: response.data?.msg || response.data?.message || `AutoDL HTTP ${response.status}`,
+  const httpOk = response.status >= 200 && response.status < 300;
+  const apiOk = !response.data?.code || response.data.code === "Success";
+  if (!httpOk || !apiOk) {
+    return res.status(httpOk ? 400 : response.status).json({
+      code: response.data?.code || "AutoDLHttpError",
+      message: response.data?.msg || response.data?.message || "AutoDL API error",
       detail: response.data,
     });
   }
@@ -377,6 +388,24 @@ async function probeService(url) {
   }
 }
 
+function freshLocalServiceTelemetry() {
+  if (!guardState.localServices || !guardState.lastSeenAtMs) return null;
+  if (Date.now() - guardState.lastSeenAtMs > BOOT_GUARD_HEARTBEAT_TIMEOUT_MS) return null;
+  return guardState.localServices;
+}
+
+function localServiceResult(local, port) {
+  const item = local?.[port];
+  if (!item || typeof item.listening !== "boolean") return null;
+  return {
+    ready: item.listening,
+    phase: item.listening ? "ready" : "starting",
+    httpStatus: null,
+    source: "autodl-local",
+    latencyMs: Number.isFinite(item.latencyMs) ? item.latencyMs : null,
+  };
+}
+
 async function buildReadiness(status) {
   if (status !== "running") {
     return {
@@ -390,18 +419,32 @@ async function buildReadiness(status) {
       },
     };
   }
+
   const snapshot = await fetchSnapshot();
-  const [jupyter, service6006, service6008] = await Promise.all([
+  const local = freshLocalServiceTelemetry();
+  const [jupyter, ext6006, ext6008] = await Promise.all([
     probeService(snapshot.links.jupyter),
-    probeService(snapshot.links.service6006),
-    probeService(snapshot.links.service6008),
+    local ? Promise.resolve(null) : probeService(snapshot.links.service6006),
+    local ? Promise.resolve(null) : probeService(snapshot.links.service6008),
   ]);
-  const comfyuiKey = COMFYUI_SERVICE_PORT === "6006" ? "service6006" : "service6008";
+
+  const service6006 = localServiceResult(local, "6006") || ext6006 ||
+    { ready: false, phase: "waiting", httpStatus: null };
+  const service6008 = localServiceResult(local, "6008") || ext6008 ||
+    { ready: false, phase: "waiting", httpStatus: null };
   const services = { jupyter, service6006, service6008 };
+
+  const preferred = COMFYUI_SERVICE_PORT === "6008" ? "service6008" : "service6006";
+  const fallback = preferred === "service6006" ? "service6008" : "service6006";
+  const comfyuiKey = services[preferred].ready ? preferred :
+    (services[fallback].ready ? fallback : preferred);
+  const comfyuiPort = comfyuiKey === "service6006" ? "6006" : "6008";
+
   return {
     instanceStatus: status,
     ready: services[comfyuiKey].ready,
-    comfyuiPort: COMFYUI_SERVICE_PORT,
+    comfyuiPort,
+    readinessSource: local ? "autodl-local-websocket" : "railway-public-probe",
     services,
     snapshot,
   };
@@ -575,6 +618,11 @@ function guardAuthorizedFor(startedAtMs) {
   return Date.now() - guardState.lastSeenAtMs <= BOOT_GUARD_HEARTBEAT_TIMEOUT_MS;
 }
 
+function clearPendingBoot() {
+  guardState.pendingNonce = null;
+  guardState.pendingIssuedAtMs = null;
+}
+
 function clearGuardState(socket = null) {
   if (socket && guardState.socket !== socket) return;
   guardState.socket = null;
@@ -583,6 +631,21 @@ function clearGuardState(socket = null) {
   guardState.nonce = null;
   guardState.connectedAtMs = null;
   guardState.lastSeenAtMs = null;
+  guardState.localServices = null;
+}
+
+function normalizeLocalServices(value) {
+  if (!value || typeof value !== "object") return null;
+  const output = {};
+  for (const port of ["6006", "6008"]) {
+    const item = value[port];
+    if (!item || typeof item !== "object" || typeof item.listening !== "boolean") continue;
+    output[port] = {
+      listening: item.listening,
+      latencyMs: Number.isFinite(item.latencyMs) ? Math.max(0, Math.min(5000, item.latencyMs)) : null,
+    };
+  }
+  return Object.keys(output).length ? output : null;
 }
 
 async function forcePowerOff(reason, bootStartedAtMs) {
@@ -637,6 +700,12 @@ async function bootGuardPoll() {
     }
 
     const status = normalizeInstanceStatus(record);
+    if (
+      guardState.pendingIssuedAtMs &&
+      Date.now() - guardState.pendingIssuedAtMs > BOOT_GUARD_PENDING_TTL_MS
+    ) {
+      clearPendingBoot();
+    }
     if (status !== "running") {
       if (["stopped", "stopping", "released"].includes(status)) {
         clearGuardState();
@@ -827,20 +896,30 @@ async function attestGuardSocket(req, socket, message) {
   if (payload.kind === "boot") {
     const tokenAgeMs = Date.now() - payload.iat;
     const deltaMs = startedAtMs - payload.iat;
+    const pendingAgeMs = guardState.pendingIssuedAtMs
+      ? Date.now() - guardState.pendingIssuedAtMs
+      : Number.POSITIVE_INFINITY;
+    const pendingMatches =
+      guardState.pendingNonce && safeEqual(guardState.pendingNonce, payload.nonce);
+
     if (
+      !pendingMatches ||
+      pendingAgeMs < -60_000 ||
+      pendingAgeMs > BOOT_GUARD_PENDING_TTL_MS ||
       tokenAgeMs < -60_000 ||
-      tokenAgeMs > BOOT_GUARD_AUTH_WINDOW_MS ||
+      tokenAgeMs > BOOT_GUARD_PENDING_TTL_MS ||
       deltaMs < -60_000 ||
-      deltaMs > BOOT_GUARD_AUTH_WINDOW_MS
+      deltaMs > BOOT_GUARD_PENDING_TTL_MS
     ) {
       audit("boot_guard_attestation_rejected", req, {
-        reason: "initial_token_not_for_current_boot",
+        reason: pendingMatches ? "initial_token_expired" : "no_matching_pending_railway_boot",
         tokenIssuedAt: new Date(payload.iat).toISOString(),
         bootStartedAt: new Date(startedAtMs).toISOString(),
         deltaMs,
         tokenAgeMs,
+        pendingAgeMs: Number.isFinite(pendingAgeMs) ? pendingAgeMs : null,
       });
-      wsClose(socket, 1008, "token not for current boot");
+      wsClose(socket, 1008, "no matching Railway boot");
       return false;
     }
   } else if (Math.abs(payload.bootStartedAt - startedAtMs) > 2000) {
@@ -863,6 +942,8 @@ async function attestGuardSocket(req, socket, message) {
   guardState.nonce = payload.nonce;
   guardState.connectedAtMs = Date.now();
   guardState.lastSeenAtMs = Date.now();
+  guardState.localServices = null;
+  if (payload.kind === "boot") clearPendingBoot();
   guardLastForcedBootStartedAtMs = null;
 
   socket.setTimeout(BOOT_GUARD_HEARTBEAT_TIMEOUT_MS + 30_000);
@@ -965,6 +1046,10 @@ app.post(
     try {
       const boot = BOOT_GUARD_ENABLED ? createBootToken() : null;
       const startCommand = buildGuardedStartCommand(boot?.token);
+      if (boot) {
+        guardState.pendingNonce = boot.payload.nonce;
+        guardState.pendingIssuedAtMs = Date.now();
+      }
 
       audit("power_on_requested", req, {
         instance: INSTANCE_UUID,
@@ -985,8 +1070,17 @@ app.post(
         autodlRequestId: response.data?.request_id || null,
       });
 
+      if (
+        response.status < 200 ||
+        response.status >= 300 ||
+        response.data?.code !== "Success"
+      ) {
+        clearPendingBoot();
+      }
+
       sendAutoDLResponse(res, response);
     } catch (error) {
+      clearPendingBoot();
       audit("power_on_error", req, { message: error.message });
       res.status(502).json({ code: "AutoDLUnavailable", message: error.message });
     }
@@ -1000,6 +1094,7 @@ app.post(
   requireAutoDLConfig,
   async (req, res) => {
     try {
+      clearPendingBoot();
       audit("power_off_requested", req, { instance: INSTANCE_UUID });
       const response = await autoDLRequest("POST", "/api/v1/dev/instance/pro/power_off", {
         instance_uuid: INSTANCE_UUID,
@@ -1103,6 +1198,7 @@ server.on("upgrade", (req, socket) => {
       return;
     }
     guardState.lastSeenAtMs = Date.now();
+    guardState.localServices = normalizeLocalServices(message.services);
   });
 });
 
