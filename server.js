@@ -67,8 +67,8 @@ const BOOT_GUARD_PENDING_TTL_MS = envNumber(
   15 * 60 * 1000
 );
 
-if (Buffer.byteLength(DASHBOARD_KEY, "utf8") < 24) {
-  throw new Error("DASHBOARD_KEY must be configured and at least 24 bytes long");
+if (Buffer.byteLength(DASHBOARD_KEY, "utf8") < 7) {
+  throw new Error("DASHBOARD_KEY must be configured and at least 7 bytes long");
 }
 if (BOOT_GUARD_ENABLED) {
   if (Buffer.byteLength(BOOT_GUARD_SECRET, "utf8") < 32) {

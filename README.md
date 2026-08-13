@@ -28,7 +28,7 @@ AutoDL API 不会把 `power_on` 调用者的来源 URL 传给实例。HMAC 启�
 ```text
 AUTODL_TOKEN=你的AutoDL开发者Token
 AUTODL_INSTANCE_UUID=pro-你的实例ID
-DASHBOARD_KEY=至少24字节的随机值
+DASHBOARD_KEY=至少7字节的随机值
 BOOT_GUARD_SECRET=至少32字节的独立随机值
 AUTODL_START_COMMAND=bash /root/zealman-app/start-comfyui.sh && bash /root/zealman-app/start-services.sh
 ```
@@ -49,7 +49,7 @@ BOOT_GUARD_PUBLIC_ORIGIN=https://your-console.example.com
 
 ## 安全变化
 
-- `DASHBOARD_KEY` 强制配置，长度至少 24 字节。
+- `DASHBOARD_KEY` 强制配置，长度至少 7 字节。
 - 控制台密钥只接受 `x-dashboard-key` 请求头。
 - 浏览器不再控制 `start_command`；开机命令统一由 `AUTODL_START_COMMAND` 管理。
 - `/api/power-on` 与 `/api/power-off` 增加轻量级内存限流。
